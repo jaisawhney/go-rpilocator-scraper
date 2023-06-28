@@ -3,16 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"os"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
 )
-
-type Listings struct {
-	listings []ProductListing
-}
 
 type ProductListing struct {
 	Sku         string
@@ -60,8 +57,15 @@ func getColumns(ctx context.Context, row *cdp.Node) []*cdp.Node {
 
 // Save JSON
 func saveJson(slice []ProductListing) {
-	json, _ := json.Marshal(slice)
-	fmt.Println(string(json))
+	json, _ := json.MarshalIndent(slice, "", "    ")
+	// fmt.Println(string(json))
+
+	outputFile, err := os.Create(`./output/output.json`)
+	if err != nil {
+		panic(err)
+	}
+
+	outputFile.Write(json)
 }
 
 // Get all the listings
@@ -75,7 +79,7 @@ func getListings(ctx context.Context) {
 		// Get the columns for each row
 		var columns = getColumns(ctx, row)
 
-		// Get the text from each column
+		// Get the info from each column
 		err := chromedp.Run(ctx,
 			chromedp.Text([]cdp.NodeID{columns[0].NodeID}, &listing.Sku, chromedp.ByNodeID),
 			chromedp.Text([]cdp.NodeID{columns[1].NodeID}, &listing.Description, chromedp.ByNodeID),
@@ -83,6 +87,16 @@ func getListings(ctx context.Context) {
 			chromedp.Text([]cdp.NodeID{columns[5].NodeID}, &listing.InStock, chromedp.ByNodeID),
 			chromedp.Text([]cdp.NodeID{columns[6].NodeID}, &listing.LastInStock, chromedp.ByNodeID),
 			chromedp.Text([]cdp.NodeID{columns[7].NodeID}, &listing.Price, chromedp.ByNodeID),
+			// Get the purchase link
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				id, err := dom.QuerySelector(columns[2].NodeID, "a").Do(ctx)
+				if err != nil {
+					panic(err)
+				}
+
+				chromedp.AttributeValue([]cdp.NodeID{id}, "href", &listing.Link, nil, chromedp.ByNodeID).Do(ctx)
+				return nil
+			}),
 		)
 		if err != nil {
 			panic(err)
