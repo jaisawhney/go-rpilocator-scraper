@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,14 +10,18 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+type Listings struct {
+	listings []ProductListing
+}
+
 type ProductListing struct {
-	sku         string
-	description string
-	link        string
-	vendor      string
-	inStock     string
-	lastInStock string
-	price       string
+	Sku         string
+	Description string
+	Link        string
+	Vendor      string
+	InStock     string
+	LastInStock string
+	Price       string
 }
 
 const website string = "https://rpilocator.com/?country=US"
@@ -53,6 +58,12 @@ func getColumns(ctx context.Context, row *cdp.Node) []*cdp.Node {
 	return columns
 }
 
+// Save JSON
+func saveJson(slice []ProductListing) {
+	json, _ := json.Marshal(slice)
+	fmt.Println(string(json))
+}
+
 // Get all the listings
 func getListings(ctx context.Context) {
 	var listings []ProductListing
@@ -66,13 +77,12 @@ func getListings(ctx context.Context) {
 
 		// Get the text from each column
 		err := chromedp.Run(ctx,
-			chromedp.Text([]cdp.NodeID{columns[0].NodeID}, &listing.sku, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[1].NodeID}, &listing.description, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[2].NodeID}, &listing.link, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[4].NodeID}, &listing.vendor, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[5].NodeID}, &listing.inStock, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[6].NodeID}, &listing.lastInStock, chromedp.ByNodeID),
-			chromedp.Text([]cdp.NodeID{columns[7].NodeID}, &listing.price, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[0].NodeID}, &listing.Sku, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[1].NodeID}, &listing.Description, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[4].NodeID}, &listing.Vendor, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[5].NodeID}, &listing.InStock, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[6].NodeID}, &listing.LastInStock, chromedp.ByNodeID),
+			chromedp.Text([]cdp.NodeID{columns[7].NodeID}, &listing.Price, chromedp.ByNodeID),
 		)
 		if err != nil {
 			panic(err)
@@ -81,7 +91,7 @@ func getListings(ctx context.Context) {
 		listings = append(listings, listing)
 	}
 
-	fmt.Println(listings[0])
+	saveJson(listings)
 }
 
 func main() {
